@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "_id": "67f779ac2df33d815fa5746c",
+      "email": "moha07467@gmail.con",
+      "password": "$2b$10$Zzxsde0eyw5reC61uKaZkuKNCwFiLqkwdAtab2euLLxXrwrhxTR/q",
+      "role": "user",
+      "createdAt": "2025-04-10T07:56:28.849Z",
+      "__v": 0
+    }
+  ]
+}

@@ -8,5 +8,5 @@
 
 - user (current user) can favorite other user (target user)
 - getting the profile of the target user have two additional field
-  -- isMyFavorite bool check if the current user already added target user to favorite .usefull when loading the target user profile
-  -- favoriteCount give u the number of people who added target user to favorite
+- isMyFavorite bool check if the current user already added target user to favorite .usefull when loading the target user profile
+- favoriteCount give u the number of people who added target user to favorite

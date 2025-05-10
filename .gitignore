@@ -33,6 +33,3 @@ temp/
 
 # Coverage from tests
 coverage/
-
-# Uploaded files
-public/uploads/

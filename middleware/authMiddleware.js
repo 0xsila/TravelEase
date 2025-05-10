@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
 // Middleware to protect routes
 exports.protect = async (req, res, next) => {
@@ -7,15 +7,17 @@ exports.protect = async (req, res, next) => {
     let token;
 
     // Check if token exists in headers
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
     }
 
-    
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Not authorized to access this route'
+        message: "Not authorized to access this route",
       });
     }
 
@@ -29,7 +31,7 @@ exports.protect = async (req, res, next) => {
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'User not found'
+          message: "User not found",
         });
       }
 
@@ -37,7 +39,7 @@ exports.protect = async (req, res, next) => {
       if (user.isAccountLocked()) {
         return res.status(401).json({
           success: false,
-          message: 'Account is locked. Please try again later.'
+          message: "Account is locked. Please try again later.",
         });
       }
 
@@ -47,7 +49,7 @@ exports.protect = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: 'Not authorized to access this route'
+        message: "Not authorized to access this route",
       });
     }
   } catch (error) {
@@ -61,7 +63,7 @@ exports.authorize = (...roles) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `User role ${req.user.role} is not authorized to access this route`
+        message: `User role ${req.user.role} is not authorized to access this route`,
       });
     }
     next();

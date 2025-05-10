@@ -1,17 +1,25 @@
-const express=require('express')
-const router=express.Router()
+const express = require("express");
+const upload = require("../middleware/multer");
+const router = express.Router();
 
 const {
-     getAllCars
-    ,getCar
-    ,createCar,
-    updateCar,
-     deleteCar,
-    
-    }=require('../controllers/cars')
+  getAllCars,
+  getCar,
+  createCar,
+  updateCar,
+  deleteCar,
+} = require("../controllers/cars");
+const { protect } = require("../middleware/authMiddleware");
 
+router
+  .route("/")
+  .get(getAllCars)
+  .post(protect, upload.array("images", 5), createCar);
 
-router.route('/').get(getAllCars).post(createCar)
-router.route('/:id').get(getCar).patch(updateCar).delete(deleteCar)
+router
+  .route("/:id")
+  .get(getCar)
+  .patch(protect, upload.array("images", 5), updateCar)
+  .delete(protect, deleteCar);
 
-module.exports=router
+module.exports = router;

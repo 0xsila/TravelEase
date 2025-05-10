@@ -4,8 +4,8 @@
   "description": "Backend for online rental platform with secure password reset",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "test": "jest"
   },
   "dependencies": {

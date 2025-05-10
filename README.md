@@ -1,9 +1,5 @@
-# for sa7b nadjib : 
-
-- l7ala rahi m5lta nchalh tfhmo .
-- in CRUD operations of hotels , houses and cars , add the real id from the real user ( i used default id ) .
-- build the file upload function for the images of hotels , houses and cars ( craete a folder for images or ............. )
-- merge server.js and app.js .
-- choose one folder : Database or db .
-- 
-- for more info , contact me : y_sila@estin.dz .
+- Adding Images to the cars,homes,hotels require changing the body type into multipart/form-data check create car in postman
+- also when they are linking they need to know that the body type is form-data
+- everything workd fine but i didn't check the authentification
+- changed postman ports to 5000
+- dont forget to clean the mongodb cluster the images exist in my local workspace only u can get images using [backend link]/[image link saved in each object -car -hotel -home]

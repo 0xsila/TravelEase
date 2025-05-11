@@ -10,3 +10,9 @@
 - getting the profile of the target user have two additional field
 - isMyFavorite bool check if the current user already added target user to favorite .usefull when loading the target user profile
 - favoriteCount give u the number of people who added target user to favorite
+
+- ------------------------------------------------------
+
+** added Favorite ** 
+
+- the favorite thing is the hotel or house or car , not the user

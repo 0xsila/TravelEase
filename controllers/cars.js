@@ -7,8 +7,9 @@ const {
 } = require("../errors");
 const req = require("express/lib/request");
 
-const getAllCars = async (req, res) => {
-  const Wilayas = [
+const getAllCars = async (req, res,next) => {
+  try{
+      const Wilayas = [
     "Adrar",
     "Chlef",
     "Laghouat",
@@ -95,9 +96,13 @@ const getAllCars = async (req, res) => {
 
   const cars = await car.find(filter).sort("createdAt");
   res.status(StatusCodes.OK).json({ cars, count: cars.length });
+  }
+  catch(error){
+  next(error);
+  }
 };
 
-const getCar = async (req, res) => {
+const getCar = async (req, res,next) => {
   try {
     const { id: carId } = req.params;
     const Car = await car.findById(carId);

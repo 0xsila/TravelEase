@@ -1,138 +1,111 @@
-// File: db.js
-const fs = require("fs");
-const path = require("path");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
+// File: Database/db.js
 const mongoose = require("mongoose");
-// Path for the local database JSON file
-const DB_FILE = path.join(__dirname, "local_database.json");
+const dns = require('dns');
+const { promisify } = require('util');
 
-// Initial database structure
-const initialDB = {
-  users: [
-    {
-      _id: "67f779ac2df33d815fa5746c",
-      email: "moha07467@gmail.con",
-      password: "$2b$10$Zzxsde0eyw5reC61uKaZkuKNCwFiLqkwdAtab2euLLxXrwrhxTR/q",
-      role: "user",
-      createdAt: new Date(1744271788849),
-      __v: 0,
-    },
-  ],
-};
+const lookup = promisify(dns.lookup);
 
-// Initialize database file if it doesn't exist
-if (!fs.existsSync(DB_FILE)) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(initialDB, null, 2));
-}
-
-const connectDB = async () => {
-  return mongoose.connect(process.env.MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
-  });
-};
-
-// Helper to read database
-const readDB = () => {
+// Test DNS resolution before connecting
+const testDNS = async (hostname) => {
   try {
-    const data = fs.readFileSync(DB_FILE, "utf8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error reading database file:", error);
-    return initialDB;
-  }
-};
-
-// Helper to write to database
-const writeDB = (data) => {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+    console.log(`🔍 Testing DNS resolution for ${hostname}...`);
+    const result = await lookup(hostname);
+    console.log(`✅ DNS resolved: ${hostname} -> ${result.address}`);
     return true;
   } catch (error) {
-    console.error("Error writing to database file:", error);
+    console.error(`❌ DNS resolution failed for ${hostname}:`, error.message);
     return false;
   }
 };
 
-// Generate a unique ID (similar to MongoDB ObjectId)
-const generateId = () => {
-  return crypto.randomBytes(12).toString("hex");
-};
-
-// User model simulation
-const User = {
-  // Find a user by email
-  findOne: async (query) => {
-    const db = readDB();
-    const user = db.users.find((user) => {
-      // Match all conditions in the query
-      return Object.keys(query).every((key) => user[key] === query[key]);
-    });
-    return user ? { ...user, comparePassword } : null;
-  },
-
-  // Find a user by ID
-  findById: async (id) => {
-    const db = readDB();
-    const user = db.users.find((user) => user._id === id);
-    return user ? { ...user, comparePassword } : null;
-  },
-
-  // Create a new user
-  create: async (userData) => {
-    const db = readDB();
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(userData.password, salt);
-
-    const newUser = {
-      _id: generateId(),
-      ...userData,
-      password: hashedPassword,
-      createdAt: new Date(),
-      __v: 0,
-    };
-
-    db.users.push(newUser);
-    writeDB(db);
-
-    return { ...newUser, comparePassword };
-  },
-
-  // Save user changes
-  save: async function (options = {}) {
-    const db = readDB();
-    const index = db.users.findIndex((u) => u._id === this._id);
-
-    if (index !== -1) {
-      // If the password is modified and validateBeforeSave is not false, hash it
-      if (
-        this.password &&
-        this.password !== db.users[index].password &&
-        options.validateBeforeSave !== false
-      ) {
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
+const connectDB = async () => {
+  try {
+    console.log("🚀 Starting MongoDB connection process...");
+    
+    // Extract hostname from MongoDB URI for DNS testing
+    const uriMatch = process.env.MONGODB_URI.match(/mongodb\+srv:\/\/[^@]+@([^\/]+)/);
+    if (uriMatch) {
+      const hostname = uriMatch[1];
+      const dnsWorking = await testDNS(hostname);
+      
+      if (!dnsWorking) {
+        console.log("🔧 Trying alternative DNS servers...");
+        // Try different DNS servers
+        dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+        await testDNS(hostname);
       }
-
-      db.users[index] = { ...this };
-      writeDB(db);
-      return this;
     }
-    return null;
-  },
+    
+    console.log("📡 Attempting MongoDB connection...");
+    
+    // Try multiple connection strategies
+    const connectionOptions = [
+      // Strategy 1: Standard connection
+      {
+        serverSelectionTimeoutMS: 30000,
+        socketTimeoutMS: 45000,
+        family: 4
+      },
+      // Strategy 2: With different DNS resolution
+      {
+        serverSelectionTimeoutMS: 45000,
+        socketTimeoutMS: 60000,
+        family: 4,
+        directConnection: false
+      },
+      // Strategy 3: Minimal options
+      {
+        serverSelectionTimeoutMS: 60000
+      }
+    ];
+    
+    let lastError;
+    
+    for (let i = 0; i < connectionOptions.length; i++) {
+      try {
+        console.log(`📋 Trying connection strategy ${i + 1}/${connectionOptions.length}...`);
+        
+        const conn = await mongoose.connect(process.env.MONGODB_URI, connectionOptions[i]);
+        
+        console.log(`✅ MongoDB Connected Successfully!`);
+        console.log(`🌐 Host: ${conn.connection.host}`);
+        console.log(`🗄️ Database: ${conn.connection.name}`);
+        
+        return conn;
+        
+      } catch (error) {
+        console.error(`❌ Strategy ${i + 1} failed:`, error.message);
+        lastError = error;
+        
+        // Wait before trying next strategy
+        if (i < connectionOptions.length - 1) {
+          console.log("⏳ Waiting 3 seconds before next attempt...");
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      }
+    }
+    
+    throw lastError;
+    
+  } catch (error) {
+    console.error('💥 All MongoDB connection strategies failed');
+    console.error('📊 Error details:', error.message);
+    
+    // Provide specific troubleshooting advice
+    if (error.message.includes('ETIMEOUT') || error.message.includes('queryTxt')) {
+      console.log('\n🔧 TROUBLESHOOTING STEPS:');
+      console.log('1. Check your internet connection');
+      console.log('2. Try using mobile hotspot or different network');
+      console.log('3. Check if your firewall blocks MongoDB (port 27017)');
+      console.log('4. Verify MongoDB Atlas IP whitelist (try 0.0.0.0/0 temporarily)');
+      console.log('5. Check if you\'re behind corporate firewall/proxy');
+      console.log('6. Try using VPN or different DNS servers');
+    }
+    
+    throw error;
+  }
 };
-
-// Method to compare passwords
-async function comparePassword(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-}
 
 module.exports = {
-  User,
-  connectDB,
-  mongoose: {
-    connect: () => Promise.resolve("Connected to local database"),
-  },
+  connectDB
 };

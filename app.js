@@ -14,14 +14,8 @@ const compression = require("compression");
 const { errorHandler } = require("./middleware/errorHandler");
 const { apiLimiter } = require("./middleware/rateLimiter");
 const rateLimit = require("express-rate-limit");
-//file upload
 const multer = require("multer");
-///
-///----------
-///------------------> Adding Images to the cars,homes,hotels require changing the body type into multipart/form-data check create car in postman
-///------------------> also when they are linking they need to know that the body type is form-data
-///------------------> everything workd fine but i didn't check the authentification
-///------------------> changed postman ports to 5000
+const path = require("path");
 
 // error handler
 const notFoundMiddleware = require("./middleware/not-found");
@@ -49,6 +43,7 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + path.extname(file.originalname));
   },
 });
+
 app.use(express.json());
 app.use(helmet());
 app.use(xss());
@@ -63,8 +58,8 @@ app.use(hpp());
 
 // Performance Middleware
 app.use(compression());
-// Set up session with secure configuration
 
+// Set up session with secure configuration
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -116,19 +111,49 @@ app.use("/uploads", express.static("uploads"));
 app.use(notFoundMiddleware);
 app.use(errorHandler);
 
-const connect = () => {
-  console.log("Attempting MongoDB connection...");
-  connectDB().then(() => {
-    console.log("Connected to MongoDB Atlas");
-    // Start server after successful connection
-    const PORT = process.env.PORT || 5001;
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(
-        `Stripe webhook endpoint: http://localhost:${PORT}/api/payment/webhook`
-      );
-    });
-  });
+// Improved connection function with retry logic
+const connectWithRetry = async (retries = 5, delay = 5000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`Connection attempt ${i + 1}/${retries}...`);
+      await connectDB();
+      console.log("Successfully connected to MongoDB Atlas");
+      
+      // Start server after successful connection
+      const PORT = process.env.PORT || 5001;
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(
+          `Stripe webhook endpoint: http://localhost:${PORT}/api/payment/webhook`
+        );
+      });
+      return; // Exit function on successful connection
+      
+    } catch (error) {
+      console.error(`Connection attempt ${i + 1} failed:`, error.message);
+      
+      if (i === retries - 1) {
+        console.error('All connection attempts failed. Exiting...');
+        process.exit(1);
+      }
+      
+      console.log(`Retrying in ${delay / 1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
 };
 
-connect();
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Promise Rejection:', err);
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+// Start the connection process
+connectWithRetry();
